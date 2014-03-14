@@ -405,7 +405,8 @@ namespace XmlSchemaClassGenerator
             if (facet is XmlSchemaMaxExclusiveFacet)
                 return new MaxExclusiveRestrictionModel { Value = facet.Value, Type = valueType };
 
-            throw new Exception(string.Format("Restriction {0} not supported.", facet.GetType().Name));
+            return null;
+            //throw new Exception(string.Format("Restriction {0} not supported.", facet.GetType().Name));
         }
 
         public IEnumerable<XmlSchemaElement> GetElements(XmlSchemaGroupBase groupBase)

@@ -133,6 +133,18 @@ namespace XmlSchemaClassGenerator
         public List<PropertyModel> Properties { get; set; }
         public List<ClassModel> DerivedTypes { get; set; }
 
+        public IEnumerable<PropertyModel> AllProperties
+        {
+            get
+            {
+                if (BaseClass == null)
+                {
+                    return Properties;
+                }
+                return Properties.Concat(BaseClass.AllProperties);
+            }
+        }
+
         public ClassModel()
         {
             Properties = new List<PropertyModel>();
@@ -239,7 +251,9 @@ namespace XmlSchemaClassGenerator
 
             var typeClassModel = Type as ClassModel;
             var isArray = !IsAttribute && typeClassModel != null && typeClassModel.TotalProperties == 1;
-            var propertyType = !isArray ? Type : typeClassModel.Properties[0].Type;
+            var propertyType = !isArray
+                ? Type 
+                : typeClassModel.AllProperties.ToList()[0].Type;
             var isNullableValueType = DefaultValue == null 
                 && IsNullable && !(IsCollection || isArray) 
                 && ((propertyType is EnumModel) || (propertyType is SimpleModel && ((SimpleModel)propertyType).ValueType.IsValueType));
@@ -292,7 +306,9 @@ namespace XmlSchemaClassGenerator
             if (simpleType != null)
             {
                 docs.AddRange(simpleType.Documentation);
-                docs.AddRange(simpleType.Restrictions.Select(r => new DocumentationModel { Language = "en", Text = r.Description }));
+                docs.AddRange(simpleType.Restrictions
+                    .Where(r => r!= null)
+                    .Select(r => new DocumentationModel { Language = "en", Text = r.Description }));
                 member.CustomAttributes.AddRange(simpleType.GetRestrictionAttributes().ToArray());
             }
 
@@ -411,7 +427,7 @@ namespace XmlSchemaClassGenerator
 
             if (isArray)
             {
-                var arrayItemProperty = typeClassModel.Properties[0];
+                var arrayItemProperty = typeClassModel.AllProperties.ToList()[0];
                 var propertyAttribute = arrayItemProperty.GetAttribute(false);
                 // HACK: repackage as ArrayItemAttribute
                 var arrayItemAttribute = new CodeAttributeDeclaration(new CodeTypeReference(typeof(XmlArrayItemAttribute)),
@@ -593,7 +609,7 @@ namespace XmlSchemaClassGenerator
 
         public IEnumerable<CodeAttributeDeclaration> GetRestrictionAttributes()
         {
-            foreach (var attribute in Restrictions.Select(r => r.GetAttribute()).Where(a => a != null))
+            foreach (var attribute in Restrictions.Where(a => a != null).Select(r => r.GetAttribute()).Where(a => a != null))
             {
                 yield return attribute;
             }
